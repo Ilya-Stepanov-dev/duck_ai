@@ -1,65 +1,87 @@
 import json
 import re
+from types import TracebackType
 from typing import Self
 import aiohttp
-from .models import ModelType, History , Message
-
-# TODO прописать генератор для сессий
-
-HEADERS_SESSION = {
-    "Host": "duckduckgo.com",
-    # "Accept": "text/event-stream",
-    # "Accept-Language": "en-US,en;q=0.5",
-    # "Accept-Encoding": "gzip, deflate, br",
-    # "Referer": "https://duckduckgo.com/",
-    # "User-Agent": self.user_agent,
-    # "DNT": "1",
-    # "Sec-GPC": "1",
-    # "Connection": "keep-alive",
-    # "Sec-Fetch-Dest": "empty",
-    # "Sec-Fetch-Mode": "cors",
-    # "Sec-Fetch-Site": "same-origin",
-    # "TE": "trailers",
-}
+from .models import ModelType, Data , Message
 
 type json_str = str
 
-class Request:
-    def __init__(self, 
-                 url: str, 
-                 header: dict, 
-                 data: json_str = ''
-        ) -> None:
+# TODO stream для вывода
 
-        self.url = url
-        self.header = header
-        self.data = data
-
-    # def get(self) -> dict:
-    #     return {self.url.__name__ : self.url,
-    #             self.header.__name__ : self.header,
-    #     }
-
-    # def post(self) -> dict:
-    #     return vars(self)
+URL = 'https://duckduckgo.com/duckchat/v1/'
 
 class AiChat:
     def __init__(self,
         model: ModelType = ModelType.GPT4o,
-        history: list[Message] | None = None,
+        messages: list[Message] | None = None,
         session: aiohttp.ClientSession | None = None,
         ) -> None:
-        self.model = model
-        self._session = session or aiohttp.ClientSession(headers=HEADERS_SESSION.copy())
-        self.vqd: str = ''
+        self._session = session or aiohttp.ClientSession()
+        self.vqd: str = self._get_vqd()
 
-        if not history:
-            self.history = History(model=model, history=[])
+        if not messages:
+            self.data = Data(model=model, messages=[])
         else:
-            self.history = History(model=model, history=history)
+            self.data = Data(model=model, messages=messages)
+
 
     async def __aenter__(self) -> Self:
         return self
     
-    async def __aexit__ (self, ) -> None:
-        pass
+
+    async def __aexit__ (self, 
+                         exc_type: type[BaseException], 
+                         exc_value: BaseException, 
+                         traceback: TracebackType
+            ) -> None:
+        await self._session.__aexit__(exc_type, exc_value, traceback)
+
+    
+    def _glue_response(self, response: str):
+        pattern = r'data: ({.*?})'
+        matches = re.findall(pattern, response)
+        messages = []
+
+        for match in matches:
+            try:
+                data = json.loads(match)
+                if 'message' in data:
+                    messages.append(data['message'])
+            except json.JSONDecodeError:
+                continue
+
+        messages = ''.join(messages)
+        return messages
+
+
+    async def _get_vqd(self) -> None:
+        async with self._session.get(
+            url = URL+'status',
+            headers = {'x-vqd-accept:': self.vqd},
+        ) as response:
+            
+            if response.status != 200:
+                raise Exception(f"Failed to initialize chat: {response.status} {await response.text()}")
+            if "x-vqd-4" in response.headers:
+                self.vqd = response.headers["x-vqd-4"]
+
+
+    async def send_request(self, message: Message) ->str :
+        self.data.messages.append(message)
+        async with self.session.post(
+            url = URL + 'chat', 
+            headers = {
+                "x-vqd-4": self.vqd,
+                "Content-Type": "application/json",
+                "Accept": "text/event-stream"
+            }, 
+            data=self.data.messages.model_dump_json(),
+        ) as response:
+            
+            if response.status != 200:
+                raise Exception(f"Failed to send message: {response.status} {await response.text()}")
+            response = await response.text()
+            response = self._glue_response(response)
+            self.data.messages.append(response)
+            return response 

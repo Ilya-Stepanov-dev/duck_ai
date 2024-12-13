@@ -18,6 +18,6 @@ class Message(BaseModel):
     content: str
 
 
-class History(BaseModel):
+class Data(BaseModel):
     model: ModelType = ModelType.GPT4o
     messages: list[Message] = []
