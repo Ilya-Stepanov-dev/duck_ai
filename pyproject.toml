@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "duck-ai"
+version = "0.1.0"
+description = ""
+authors = ["Ilya Stepanov <ilya.stepanov.dev@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pydantic = "^2.10.3"
+aiohttp = "^3.11.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
