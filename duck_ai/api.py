@@ -3,11 +3,9 @@ import re
 from types import TracebackType
 from typing import Self
 import aiohttp
-from .models import ModelType, Data , Message
+from .models import ModelType, Data , Message, Role
 
 type json_str = str
-
-# TODO stream для вывода
 
 URL = 'https://duckduckgo.com/duckchat/v1/'
 
@@ -16,9 +14,10 @@ class AiChat:
         model: ModelType = ModelType.GPT4o,
         messages: list[Message] | None = None,
         session: aiohttp.ClientSession | None = None,
+        vqd: str = '1'
         ) -> None:
         self._session = session or aiohttp.ClientSession()
-        self.vqd: str = self._get_vqd()
+        self.vqd = vqd 
 
         if not messages:
             self.data = Data(model=model, messages=[])
@@ -58,7 +57,7 @@ class AiChat:
     async def _get_vqd(self) -> None:
         async with self._session.get(
             url = URL+'status',
-            headers = {'x-vqd-accept:': self.vqd},
+            headers = {'x-vqd-accept': self.vqd},
         ) as response:
             
             if response.status != 200:
@@ -67,21 +66,27 @@ class AiChat:
                 self.vqd = response.headers["x-vqd-4"]
 
 
-    async def send_request(self, message: Message) ->str :
-        self.data.messages.append(message)
-        async with self.session.post(
+    async def send_request(self, message: str) ->str :
+        self.data.messages.append(Message(role=Role.user, content=message))
+
+        if self.vqd == '1':
+            await self._get_vqd()
+        
+        async with self._session.post(
             url = URL + 'chat', 
             headers = {
                 "x-vqd-4": self.vqd,
                 "Content-Type": "application/json",
                 "Accept": "text/event-stream"
             }, 
-            data=self.data.messages.model_dump_json(),
-        ) as response:
-            
+            data=self.data.model_dump_json(),
+        ) as response:     
+                   
             if response.status != 200:
                 raise Exception(f"Failed to send message: {response.status} {await response.text()}")
+            self.vqd = response.headers["x-vqd-4"]
+
             response = await response.text()
             response = self._glue_response(response)
-            self.data.messages.append(response)
-            return response 
+            self.data.messages.append(Message(role=Role.assistant, content=response))
+            return response
