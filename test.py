@@ -1,10 +1,10 @@
 import asyncio
 
 from duck_ai.api import AiChat
-from duck_ai.history.json_history import JsonHistory
+from duck_ai.history import JsonHistory
 
 async def main():
-    history = JsonHistory(path_file='.storage/data2.json')
+    history = JsonHistory(path_file='.storage/data3.json')
 
     async with AiChat(history=history) as chat:
         while True:

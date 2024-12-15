@@ -1,4 +1,4 @@
-from duck_ai.models import Data, Message, Role, ModelType
+from duck_ai.enums import ModelType
 
 class History():
 

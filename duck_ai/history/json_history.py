@@ -3,7 +3,8 @@ from pathlib import Path
 from pydantic_core import ValidationError
 
 from .history import History
-from duck_ai.models import ModelType, Message, Data, HistoryModel
+from duck_ai.models import Message, Data, HistoryModel
+from duck_ai.enums import ModelType
 
 
 class JsonHistory(History):
