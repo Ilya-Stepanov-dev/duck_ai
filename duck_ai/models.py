@@ -2,8 +2,8 @@ from enum import Enum
 from pydantic import BaseModel
 
 class Role(str, Enum):
-    user = 'user'
-    assistant = 'assistant'
+    USER = 'user'
+    ASSISTANT = 'assistant'
 
 
 class ModelType(str, Enum):
@@ -21,3 +21,7 @@ class Message(BaseModel):
 class Data(BaseModel):
     model: ModelType = ModelType.GPT4o
     messages: list[Message] = []
+
+
+class HistoryModel(Data):
+    vqd: str
