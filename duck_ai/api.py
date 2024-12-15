@@ -3,16 +3,11 @@ import re
 from types import TracebackType
 from typing import Self
 import aiohttp
-from .models import Message, Role
-from .history.history import History
-from .history.json_history import JsonHistory
+from duck_ai.models import Message, Role
+from duck_ai.history import History
 
-
-type json_str = str
 
 URL = 'https://duckduckgo.com/duckchat/v1/'
-
-# TODO Придумать, что сделать с save_storage()
 
 class AiChat:
     def __init__(self,
@@ -22,6 +17,7 @@ class AiChat:
 
         self._session = session or aiohttp.ClientSession()
         self.history = history
+
 
     async def __aenter__(self) -> Self:
         return self
@@ -35,7 +31,7 @@ class AiChat:
         await self._session.__aexit__(exc_type, exc_value, traceback)
 
     
-    def _glue_response(self, response: str):
+    def _glue_response(self, response: str) -> str:
         pattern = r'data: ({.*?})'
         matches = re.findall(pattern, response)
         messages = []
@@ -62,20 +58,19 @@ class AiChat:
             if response.status != 200:
                 raise Exception(f"Failed to initialize chat: {response.status} {await response.text()}")
             if "x-vqd-4" in response.headers:
-                self.history.data.vqd = response.headers["x-vqd-4"]
-                self.history.save_storage()
+                self.history.vqd = response.headers["x-vqd-4"]
 
 
     async def send_request(self, message: str) -> str:
         self.history.add_message(Message(role=Role.USER, content=message))
 
-        if self.history.data.vqd == '1':
+        if self.history.vqd == '1':
             await self._get_vqd()
-        
+
         async with self._session.post(
             url = URL + 'chat', 
             headers = {
-                "x-vqd-4": self.history.data.vqd,
+                "x-vqd-4": self.history.vqd,
                 "Content-Type": "application/json",
                 "Accept": "text/event-stream"
             }, 
@@ -84,7 +79,7 @@ class AiChat:
                    
             if response.status != 200:
                 raise Exception(f"Failed to send message: {response.status} {await response.text()}")
-            self.history.data.vqd = response.headers["x-vqd-4"]
+            self.history.vqd = response.headers["x-vqd-4"]
 
             response = await response.text()
             response = self._glue_response(response)
