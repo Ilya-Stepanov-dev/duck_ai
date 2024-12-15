@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "duck-ai"
 version = "0.1.0"
-description = ""
+description = "DuckDuckGo AI Chat API. For creating your own chatbots"
 authors = ["Ilya Stepanov <ilya.stepanov.dev@gmail.com>"]
 readme = "README.md"
 
