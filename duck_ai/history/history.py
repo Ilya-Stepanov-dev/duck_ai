@@ -1,7 +1,5 @@
 from duck_ai.models import Data, Message, Role, ModelType
 
-# TODO доделать класс Histoty. Сделать его универсальным
-
 class History():
 
     def __init__(self, model: ModelType) -> None:
