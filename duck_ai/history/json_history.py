@@ -19,7 +19,7 @@ class JsonHistory(History):
         try:
             with open(self.path_file, 'r') as file:
                 self.data = HistoryModel.model_validate_json(file.read())
-        except ValidationError as e:
+        except (FileNotFoundError, ValidationError) as e:
             self._create_storage()
             self.data = HistoryModel(model=model, messages=[], vqd='1')
             self._save_storage()
